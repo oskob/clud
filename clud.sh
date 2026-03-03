@@ -439,6 +439,7 @@ run_install() {
   local default_dir="/usr/local/bin"
   local default_name="clud"
   local install_dir install_name target_path
+  local home_config_dir home_dir_existed
 
   printf '%s\n' "Install clud executable"
   read -r -p "Install directory [$default_dir]: " install_dir
@@ -487,14 +488,49 @@ run_install() {
   if [ -f "$CWD_ENV_FILE" ] && [ ! -f "$HOME_ENV_FILE" ]; then
     read -r -p "Found local config at $CWD_ENV_FILE but no home config. Copy to $HOME_ENV_FILE? [y/N] " copy_local_to_home
     if [[ "$copy_local_to_home" =~ ^[Yy]$ ]]; then
-      mkdir -p "$(dirname "$HOME_ENV_FILE")" || {
-        printf '%s\n' "Failed to create home config directory: $(dirname "$HOME_ENV_FILE")"
+      home_config_dir=$(dirname "$HOME_ENV_FILE")
+      home_dir_existed=0
+      if [ -d "$home_config_dir" ]; then
+        home_dir_existed=1
+      fi
+
+      mkdir -p "$home_config_dir" || {
+        printf '%s\n' "Failed to create home config directory: $home_config_dir"
         return 1
       }
+
       cp "$CWD_ENV_FILE" "$HOME_ENV_FILE" || {
         printf '%s\n' "Failed to copy config to: $HOME_ENV_FILE"
         return 1
       }
+
+      if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+        local sudo_group owner_spec
+        sudo_group=$(id -gn "$SUDO_USER" 2>/dev/null)
+        if [ -n "$sudo_group" ]; then
+          owner_spec="$SUDO_USER:$sudo_group"
+        else
+          owner_spec="$SUDO_USER"
+        fi
+
+        if [ "$home_dir_existed" -eq 0 ]; then
+          chown "$owner_spec" "$home_config_dir" || {
+            printf '%s\n' "Failed to set ownership on directory: $home_config_dir"
+            return 1
+          }
+        fi
+
+        chown "$owner_spec" "$HOME_ENV_FILE" || {
+          printf '%s\n' "Failed to set ownership on config: $HOME_ENV_FILE"
+          return 1
+        }
+      fi
+
+      chmod 600 "$HOME_ENV_FILE" || {
+        printf '%s\n' "Failed to set config permissions (600): $HOME_ENV_FILE"
+        return 1
+      }
+
       printf '%s\n' "Copied config to: $HOME_ENV_FILE"
       printf '\n'
     fi
