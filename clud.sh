@@ -359,11 +359,20 @@ run_setup() {
   for i in "${!model_options[@]}"; do
     printf '%s\n' "  $((i + 1))) ${model_options[$i]}"
   done
-  read -r -p "  Choice [1-${#model_options[@]}] (default 1): " model_choice
+  read -r -p "  Choice [1-${#model_options[@]}] or type custom model (default 1): " model_choice
   model_choice="${model_choice:-1}"
-  model="${model_values[$((model_choice - 1))]}"
-  if [ -z "$model" ]; then
-    model="${model_values[0]}"
+  if [[ "$model_choice" =~ ^[0-9]+$ ]]; then
+    if [ "$model_choice" -lt 1 ] || [ "$model_choice" -gt "${#model_options[@]}" ]; then
+      printf '%s\n' "Invalid model choice number: $model_choice"
+      exit 1
+    fi
+    model="${model_values[$((model_choice - 1))]}"
+  else
+    if [ -z "${model_choice//[[:space:]]/}" ]; then
+      printf '%s\n' "Model cannot be empty."
+      exit 1
+    fi
+    model="$model_choice"
   fi
   printf '%s\n' "  Using: $model"
   printf '\n'
@@ -581,10 +590,22 @@ print(json.dumps({
         }
 
       cmd=$(printf '%s' "$RESPONSE" | python3 -c "
-import sys, json
-data = json.JSONDecoder(strict=False).decode(sys.stdin.read())
-try:    print(data['candidates'][0]['content']['parts'][0]['text'].strip())
-except: print('Error:', json.dumps(data, indent=2), file=sys.stderr); sys.exit(1)
+import json, sys
+raw = sys.stdin.read()
+if not raw.strip():
+    print('Error: Empty response from Gemini API.', file=sys.stderr)
+    sys.exit(1)
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError as exc:
+    print(f'Error: Invalid JSON from Gemini API: {exc}', file=sys.stderr)
+    print(raw.strip() or '<empty>', file=sys.stderr)
+    sys.exit(1)
+try:
+    print(data['candidates'][0]['content']['parts'][0]['text'].strip())
+except Exception:
+    print('Error:', json.dumps(data, indent=2), file=sys.stderr)
+    sys.exit(1)
 ")
       ;;
 
@@ -609,10 +630,22 @@ print(json.dumps({
         }
 
       cmd=$(printf '%s' "$RESPONSE" | python3 -c "
-import sys, json
-data = json.JSONDecoder(strict=False).decode(sys.stdin.read())
-try:    print(data['choices'][0]['message']['content'].strip())
-except: print('Error:', json.dumps(data, indent=2), file=sys.stderr); sys.exit(1)
+import json, sys
+raw = sys.stdin.read()
+if not raw.strip():
+    print('Error: Empty response from OpenAI API.', file=sys.stderr)
+    sys.exit(1)
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError as exc:
+    print(f'Error: Invalid JSON from OpenAI API: {exc}', file=sys.stderr)
+    print(raw.strip() or '<empty>', file=sys.stderr)
+    sys.exit(1)
+try:
+    print(data['choices'][0]['message']['content'].strip())
+except Exception:
+    print('Error:', json.dumps(data, indent=2), file=sys.stderr)
+    sys.exit(1)
 ")
       ;;
 
@@ -640,10 +673,22 @@ print(json.dumps({
         }
 
       cmd=$(printf '%s' "$RESPONSE" | python3 -c "
-import sys, json
-data = json.JSONDecoder(strict=False).decode(sys.stdin.read())
-try:    print(data['content'][0]['text'].strip())
-except: print('Error:', json.dumps(data, indent=2), file=sys.stderr); sys.exit(1)
+import json, sys
+raw = sys.stdin.read()
+if not raw.strip():
+    print('Error: Empty response from Claude API.', file=sys.stderr)
+    sys.exit(1)
+try:
+    data = json.loads(raw)
+except json.JSONDecodeError as exc:
+    print(f'Error: Invalid JSON from Claude API: {exc}', file=sys.stderr)
+    print(raw.strip() or '<empty>', file=sys.stderr)
+    sys.exit(1)
+try:
+    print(data['content'][0]['text'].strip())
+except Exception:
+    print('Error:', json.dumps(data, indent=2), file=sys.stderr)
+    sys.exit(1)
 ")
       ;;
 
