@@ -183,7 +183,6 @@ load_config_with_precedence() {
 }
 
 SCRIPT_PATH=$(resolve_script_path)
-SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 EFFECTIVE_HOME=$(get_effective_home)
 CWD_ENV_FILE="$PWD/.clud.env"
 HOME_ENV_FILE="$EFFECTIVE_HOME/.clud.env"
@@ -449,6 +448,15 @@ run_install() {
   local default_name="clud"
   local install_dir install_name target_path
   local home_config_dir home_dir_existed
+  local effective_user effective_group owner_spec
+
+  effective_user="${SUDO_USER:-$(id -un)}"
+  effective_group=$(id -gn "$effective_user" 2>/dev/null)
+  if [ -n "$effective_group" ]; then
+    owner_spec="$effective_user:$effective_group"
+  else
+    owner_spec="$effective_user"
+  fi
 
   printf '%s\n' "Install clud executable"
   read -r -p "Install directory [$default_dir]: " install_dir
@@ -481,16 +489,25 @@ run_install() {
   cp "$SCRIPT_PATH" "$target_path" 2>/dev/null || {
     printf '%s\n' "Failed to copy script to $target_path"
     printf '%s\n' "You may need elevated permissions. Retry with:"
-    printf '%s\n' "  sudo cp \"$SCRIPT_PATH\" \"$target_path\" && sudo chmod +x \"$target_path\""
+    printf '%s\n' "  sudo cp \"$SCRIPT_PATH\" \"$target_path\" && sudo chmod +x \"$target_path\" && sudo chown \"$owner_spec\" \"$target_path\""
     return 1
   }
 
   chmod +x "$target_path" 2>/dev/null || {
     printf '%s\n' "Failed to mark executable: $target_path"
     printf '%s\n' "You may need elevated permissions. Retry with:"
-    printf '%s\n' "  sudo chmod +x \"$target_path\""
+    printf '%s\n' "  sudo chmod +x \"$target_path\" && sudo chown \"$owner_spec\" \"$target_path\""
     return 1
   }
+
+  if [ "$(id -u)" -eq 0 ]; then
+    chown "$owner_spec" "$target_path" 2>/dev/null || {
+      printf '%s\n' "Failed to set ownership on executable: $target_path"
+      printf '%s\n' "Try:"
+      printf '%s\n' "  sudo chown \"$owner_spec\" \"$target_path\""
+      return 1
+    }
+  fi
 
   printf '%s\n' "Installed: $target_path"
   
