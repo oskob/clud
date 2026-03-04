@@ -301,29 +301,29 @@ run_setup() {
       provider="gemini"
       provider_label="Google Gemini"
       model_options=(
-        "gemini-2.5-flash-lite   — fastest and cheapest (recommended)"
-        "gemini-3.0-flash        — newest flash model"
-        "gemini-2.5-flash        — fast and capable"
+        "gemini-3.1-flash-lite-preview   — fastest and cheap (recommended)"
+        "gemini-3.1-pro-preview          — most capable"
+        "gemini-2.5-flash                — reliable"
       )
-      model_values=("gemini-2.5-flash-lite" "gemini-3.0-flash" "gemini-2.5-flash")
+      model_values=("gemini-3.1-flash-lite-preview" "gemini-3.1-pro-preview" "gemini-2.5-flash")
       ;;
     2)
       provider="claude"
       provider_label="Anthropic Claude"
       model_options=(
-        "claude-haiku-4-5-20251001  — fastest and cheapest (recommended)"
-        "claude-sonnet-4-6          — smarter, moderate cost"
+        "claude-haiku-4-5                — fastest and cheapest (recommended)"
+        "claude-sonnet-4-6               — smarter, moderate cost"
       )
-      model_values=("claude-haiku-4-5-20251001" "claude-sonnet-4-6")
+      model_values=("claude-haiku-4-5" "claude-sonnet-4-6")
       ;;
     3)
       provider="openai"
       provider_label="OpenAI"
       model_options=(
-        "gpt-4o-mini             — fast and cheap (recommended)"
-        "gpt-4o                  — smarter, higher cost"
+        "gpt-5-mini                      — fast and cheap (recommended)"
+        "gpt-5.2                         — smarter, higher cost"
       )
-      model_values=("gpt-4o-mini" "gpt-4o")
+      model_values=("gpt-5-mini" "gpt-5.2")
       ;;
     *)
       printf '%s\n' "Invalid choice. Aborting."
